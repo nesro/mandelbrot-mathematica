@@ -1,15 +1,19 @@
 /**
- * BI-PMA
- * nesrotom@fit.cvut.cz
+ * https://github.com/nesro/mandelbrot-mathematica
+ * Tomas Nesrovnal
+ * nesro@nesro.cz
  */
 
 #include "WolframLibrary.h"
 
 /**
  * http://en.wikipedia.org/wiki/Mandelbrot_set
- * mandelbrot6(_Real, _Real, _Integer)
+ * @param _Real x
+ * @param _Real y
+ * @param _Integer maximum iterations
+ * @return _Integer iterations until escape, 0 if it never escapes
  */
-DLLEXPORT int mandelbrot6(WolframLibraryData libData, mint Argc,
+DLLEXPORT int mandelbrot(WolframLibraryData libData, mint Argc,
     MArgument *Args, MArgument Res)
 {
 	mreal re = MArgument_getReal(Args[0]);
