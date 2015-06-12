@@ -1,0 +1,145 @@
+(* https://github.com/nesro/mandelbrot *)
+(* Tomas \
+Nesrovnal *)
+(* nesro@nesro.cz *)
+
+ClearAll[mandelbrotDotC, mandelbrot, mb, mandelbrotAviGenerator];
+
+(* the directory with the mandelbrot.c file *)
+
+SetDirectory["/home/n/Dropbox/fit/BI-PMA/mb"];
+
+(* this step is needed only once *)
+Needs["CCompilerDriver`"];
+mandelbrotDotC = CreateLibrary[
+   {"mandelbrot.c"},
+   "mandelbrot",
+   "Language" -> "C"];
+
+mandelbrot = 
+  LibraryFunctionLoad["mandelbrot", 
+   "mandelbrot", {Real, Real, Integer}, Integer];
+
+mb = Compile[
+   {
+    {xmin, _Real},
+    {xmax, _Real},
+    {xstep, _Real},
+    {ymin, _Real},
+    {ymax, _Real},
+    {ystep, _Real},
+    {power, _Real}
+    },
+   Table[
+    mandelbrot[
+     x,
+     y,
+     Round[power]
+     ],(*mandelbrot*)
+    {y, ymin, ymax, ystep},
+    {x, xmin, xmax, xstep}
+    ](*Table*)
+   ];(*Compile*)
+
+mandelbrotAviGenerator[
+   filename_String,
+   size_Integer,
+   x_Real,
+   y_Real,
+   frames_Integer
+   ] :=
+  AbsoluteTiming[
+   Export[
+    filename,
+    Block[
+     {
+      delta = 3.0*1.0625,
+      power = 15.0,
+      step
+      },
+     Table[
+      delta = delta/1.0625;
+      step = (2 delta)/size;
+      power = power 1.01666666667;
+      Print[n];
+      ArrayPlot[
+       mb[
+        x - delta,
+        x + delta,
+        step,
+        y - delta,
+        y + delta,
+        step,
+        power
+        ],(*mb*)
+       
+       ColorFunction -> (If[# == 0, RGBColor[0, 0, 0], 
+           Hue[0.8 #^4]] &),
+       ImageSize -> {size, size},
+       Frame -> None,
+       ImagePadding -> None
+       ],(*ArrayPlot*)
+      {n, 1, frames}
+      ](*Table*)
+     ](*Block*)
+    ](*Export*)
+   \
+];(*AbsoluteTiming*)
+
+ClearAll[size, mouse, ymin, ymax, xmin, xmax, power, xclick, yclick, 
+  xzoom, yzoom, zoomed];
+DynamicModule[
+ {
+  size = 500,
+  mouse = {0.0, 0.0},
+  ymin = -3.0,
+  ymax = 3.0,
+  xmin = -3.0,
+  xmax = 3.0,
+  power = 15.0,
+  xclick = 0.0,
+  yclick = 0.0,
+  xzoom = 0.0,
+  yzoom = 0.0,
+  zoomed = 0
+  }, {
+  Button["animate!",
+   Print[mandelbrotAviGenerator["mandelbrot_1.avi", size, xclick, 
+     yclick, zoomed*12]],
+   Method -> "Queued"
+   ],(*Button*)
+  EventHandler[
+   Dynamic[
+    { (* dynamic objects begin *)
+     ArrayPlot[
+      mb[xmin, xmax, (xmax - xmin)/size, ymin, 
+       ymax, (ymax - ymin)/size, power],
+      ImageSize -> {size, size},
+      Frame -> True,
+      ColorFunction -> (If[# == 0, RGBColor[0, 0, 0], Hue[0.8 #^4]] &),
+      ImagePadding -> None,
+      ImageMargins -> 0],
+     zoomed
+     }, (* dynamic objects end *)
+    SynchronousUpdating -> False
+    ](*Dynamic*),
+   {
+    "MouseClicked" :> (
+      mouse = MousePosition["Graphics"];
+      If[mouse === None, Abort[]];
+      yclick = ymin + (ymax - ymin)*((size - mouse[[2]])/size);
+      xclick = xmin + (xmax - xmin)*(mouse[[1]]/size);
+      xzoom = (xmax - xmin)/4;
+      yzoom = (ymax - ymin)/4;
+      xmin = xclick - xzoom;
+      xmax = xclick + xzoom;
+      ymin = yclick - yzoom;
+      ymax = yclick + yzoom;
+      power = power 1.2;(* the power needs to be 20% cooler *)
+      
+      zoomed++
+      )(*MouseClicked*)
+    }
+   ](*EventHandler*)
+  }
+ ](*DynamicModule*)
